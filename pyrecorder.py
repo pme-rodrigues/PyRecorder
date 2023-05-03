@@ -1,10 +1,3 @@
-"""
-    Insert a summary description of the file.
-    ------
-    TODO:
-    -
-"""
-
 import soundcard as sc
 import numpy as np
 import wave
@@ -12,23 +5,18 @@ import threading
 
 
 class PyRecorder:
-    def __init__(self, device_name, filename="output.wav"):
+    def __init__(self, device_name):
         self.sample_rate = 48000
         self.block_size = 1024
 
         # SoundCard library processes audio data as floating-point numbers
         self.recorded_audio = np.empty((0, 2), dtype=np.float32)
-        self.filename = filename
         self.rec_state = threading.Event()
         self.err_recording = False
         self.background_thread = None
 
         # Attempt to find the loopback device (used to record system audio)
-        try:
-            self.loopback_device = sc.get_microphone(device_name, include_loopback=True)
-            print(f"Device with name '{device_name}' is ready to record")
-        except ValueError:
-            print(f"Loopback device with name '{device_name}' not found")
+        self.set_device(device_name)
 
     def record(self):
         try:
@@ -61,6 +49,13 @@ class PyRecorder:
 
     def reset_recording(self):
         self.recorded_audio = np.empty((0, 2), dtype=np.float32)
+
+    def set_device(self, device_name):
+        try:
+            self.loopback_device = sc.get_microphone(device_name, include_loopback=True)
+            print(f"Device with name '{device_name}' is ready to record")
+        except ValueError:
+            print(f"Loopback device with name '{device_name}' not found")
 
     def save_wav(self):
         with wave.open(self.filename, "wb") as wav_file:

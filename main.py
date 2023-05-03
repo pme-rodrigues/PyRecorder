@@ -10,21 +10,36 @@ class PyRecorderGUI(tk.Frame):
         super().__init__(root)
         self.root = root
         self.pack()
+        self.configure(bg="#242424")
         self.create_widgets()
 
     def create_widgets(self):
         self.select_device_button = tk.Button(
-            self, text="Select Device", command=self.select_device
+            self,
+            text="Select Device",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            relief="flat",
+            command=self.select_device,
         )
         self.select_device_button.grid(row=0, column=0, padx=10, pady=10)
 
-        self.quit_button = tk.Button(self, text="Quit", command=self.root.destroy)
-        self.quit_button.grid(row=0, column=1, padx=10, pady=10)
+        self.quit_button = tk.Button(
+            self,
+            text="Quit",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            relief="flat",
+            command=self.root.destroy,
+        )
 
     def select_device(self):
         self.device_selection_window = tk.Toplevel(self.root)
         self.device_selection_window.title("Select Device")
         self.device_selection_window.geometry("300x250")
+        self.device_selection_window.configure(bg="#242424")
         self.device_selection_window.grab_set()
 
         self.device_listbox = tk.Listbox(self.device_selection_window)
@@ -35,7 +50,13 @@ class PyRecorderGUI(tk.Frame):
             self.device_listbox.insert(tk.END, mic.name)
 
         self.confirm_button = tk.Button(
-            self.device_selection_window, text="Confirm", command=self.device_selected
+            self.device_selection_window,
+            text="Confirm",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            relief="flat",
+            command=self.device_selected,
         )
         self.confirm_button.grid(row=1, padx=10, pady=10, sticky="N")
 
@@ -55,16 +76,29 @@ class PyRecorderGUI(tk.Frame):
 
     def show_start_button(self):
         self.start_button = tk.Button(
-            self, text="Start Recording", command=self.start_recording
+            self,
+            text="Start \u25B6",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            relief="flat",
+            command=self.start_recording_event,
         )
         self.start_button.grid(row=0, column=0, padx=10, pady=10)
         self.select_device_button.destroy()
 
-    def start_recording(self):
+    def start_recording_event(self):
         self.rec.start_recording()
-        self.start_button.config(text="Stop Recording", command=self.stop_recording)
+        self.start_button.config(
+            text="Stop \u25A0",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            relief="flat",
+            command=self.stop_recording_event,
+        )
 
-    def stop_recording(self):
+    def stop_recording_event(self):
         self.rec.stop_recording()
 
         filename = simpledialog.askstring(
@@ -75,12 +109,16 @@ class PyRecorderGUI(tk.Frame):
             self.rec.save_wav()
             self.rec.reset_recording()
 
-        self.start_button.config(text="Start Recording", command=self.start_recording)
+        self.start_button.config(
+            text="Start \u25B6", command=self.start_recording_event
+        )
 
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("PyRecorder")
     root.geometry("300x50")
+    root.configure(bg="#242424")
+    # root.resizable(False, False)
     app = PyRecorderGUI(root=root)
     app.mainloop()
