@@ -12,6 +12,7 @@ class PyRecorderGUI(tk.Frame):
         self.pack()
         self.configure(bg="#242424")
         self.create_widgets()
+        self.rec = PyRecorder()
 
     def create_widgets(self):
         self.select_device_button = tk.Button(
@@ -24,16 +25,6 @@ class PyRecorderGUI(tk.Frame):
             command=self.select_device,
         )
         self.select_device_button.grid(row=0, column=0, padx=10, pady=10)
-
-        self.quit_button = tk.Button(
-            self,
-            text="Quit",
-            font=("Arial", 10, "bold"),
-            bg="#a41c1c",
-            fg="#f2f2f2",
-            relief="flat",
-            command=self.root.destroy,
-        )
 
     def select_device(self):
         self.device_selection_window = tk.Toplevel(self.root)
@@ -59,14 +50,13 @@ class PyRecorderGUI(tk.Frame):
             command=self.device_selected,
         )
         self.confirm_button.grid(row=1, padx=10, pady=10, sticky="N")
-
         self.device_selection_window.columnconfigure(0, weight=1)
 
     def device_selected(self):
         selected_index = self.device_listbox.curselection()
         if selected_index:
             selected_device = self.microphones[selected_index[0]]
-            self.rec = PyRecorder(selected_device.name)
+            self.rec.set_device(selected_device.name)
             self.device_selection_window.destroy()
             self.show_start_button()
         else:
@@ -84,11 +74,11 @@ class PyRecorderGUI(tk.Frame):
             relief="flat",
             command=self.start_recording_event,
         )
-        self.start_button.grid(row=0, column=0, padx=10, pady=10)
-        self.select_device_button.destroy()
+        self.start_button.grid(row=0, column=1, padx=10, pady=10)
 
     def start_recording_event(self):
         self.rec.start_recording()
+        self.select_device_button.config(state="disabled")
         self.start_button.config(
             text="Stop \u25A0",
             font=("Arial", 10, "bold"),
@@ -98,8 +88,18 @@ class PyRecorderGUI(tk.Frame):
             command=self.stop_recording_event,
         )
 
+        self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
+
+    def on_window_closing(self):
+        if self.rec.is_recording_on():
+            self.rec.stop_recording()
+            self.root.destroy()
+        else:
+            self.root.destroy()
+
     def stop_recording_event(self):
         self.rec.stop_recording()
+        self.select_device_button.config(state="normal")
 
         filename = simpledialog.askstring(
             "Save Recording", "Enter filename:", parent=self.root

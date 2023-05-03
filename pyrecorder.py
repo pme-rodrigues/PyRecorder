@@ -5,7 +5,7 @@ import threading
 
 
 class PyRecorder:
-    def __init__(self, device_name):
+    def __init__(self):
         self.sample_rate = 48000
         self.block_size = 1024
 
@@ -14,9 +14,7 @@ class PyRecorder:
         self.rec_state = threading.Event()
         self.err_recording = False
         self.background_thread = None
-
-        # Attempt to find the loopback device (used to record system audio)
-        self.set_device(device_name)
+        self.loopback_device = None
 
     def record(self):
         try:
@@ -38,6 +36,9 @@ class PyRecorder:
             self.rec_state.clear()
         self.background_thread = threading.Thread(target=self.record)
         self.background_thread.start()
+
+    def is_recording_on(self):
+        return not self.rec_state.is_set()
 
     def stop_recording(self):
         self.rec_state.set()
