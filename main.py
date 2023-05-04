@@ -14,6 +14,9 @@ class PyRecorderGUI(tk.Frame):
         self.create_widgets()
         self.rec = PyRecorder()
 
+        # Ensure proper behaviour when unexpected window closing
+        self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
+
     def create_widgets(self):
         self.select_device_button = tk.Button(
             self,
@@ -88,7 +91,7 @@ class PyRecorderGUI(tk.Frame):
             command=self.stop_recording_event,
         )
 
-        self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
+        # self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
 
     def on_window_closing(self):
         if self.rec.is_recording_on():
@@ -101,14 +104,34 @@ class PyRecorderGUI(tk.Frame):
         self.rec.stop_recording()
         self.select_device_button.config(state="normal")
 
-        filename = simpledialog.askstring(
-            "Save Recording", "Enter filename:", parent=self.root
-        )
-        if filename:
+        while True:
+            filename = simpledialog.askstring(
+                "Save Recording", "Enter filename:", parent=self.root
+            )
+
+            if filename is None:
+                break
+            if len(filename) < 1:  # check if filename is empty
+                simpledialog.messagebox.showwarning(
+                    "Invalid Filename",
+                    "Filename cannot be empty. Please try again.",
+                    parent=self.root,
+                )
+                continue
+            if not filename.isalpha():
+                simpledialog.messagebox.showwarning(
+                    "Invalid Filename",
+                    "The filename must only contain letters. Please try again.",
+                    parent=self.root,
+                )
+                continue
+
+            # if we get here, the filename is valid
             self.rec.set_filename(filename)
             self.rec.save_wav()
-            self.rec.reset_recording()
+            break
 
+        self.rec.reset_recording()
         self.start_button.config(
             text="Start \u25B6", command=self.start_recording_event
         )

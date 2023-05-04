@@ -59,7 +59,7 @@ class PyRecorder:
             print(f"Loopback device with name '{device_name}' not found")
 
     def save_wav(self):
-        with wave.open(self.filename, "wb") as wav_file:
+        with wave.open((self.filename + ".wav"), "wb") as wav_file:
             wav_file.setnchannels(2)
             wav_file.setsampwidth(2)
             wav_file.setframerate(self.sample_rate)
