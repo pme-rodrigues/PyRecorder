@@ -3,6 +3,7 @@ import soundcard as sc
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
+import re
 
 
 class PyRecorderGUI(tk.Frame):
@@ -59,7 +60,7 @@ class PyRecorderGUI(tk.Frame):
         selected_index = self.device_listbox.curselection()
         if selected_index:
             selected_device = self.microphones[selected_index[0]]
-            self.rec.set_device(selected_device.name)
+            self.rec.loopback_device = selected_device.name
             self.device_selection_window.destroy()
             self.show_start_button()
         else:
@@ -91,8 +92,6 @@ class PyRecorderGUI(tk.Frame):
             command=self.stop_recording_event,
         )
 
-        # self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
-
     def on_window_closing(self):
         if self.rec.is_recording_on():
             self.rec.stop_recording()
@@ -111,23 +110,15 @@ class PyRecorderGUI(tk.Frame):
 
             if filename is None:
                 break
-            if len(filename) < 1:  # check if filename is empty
-                simpledialog.messagebox.showwarning(
-                    "Invalid Filename",
-                    "Filename cannot be empty. Please try again.",
-                    parent=self.root,
-                )
-                continue
-            if not filename.isalpha():
-                simpledialog.messagebox.showwarning(
-                    "Invalid Filename",
-                    "The filename must only contain letters. Please try again.",
-                    parent=self.root,
-                )
+
+            is_valid, warning_message = self._validate_filename(filename)
+
+            if not is_valid:
+                if warning_message is not None:
+                    self._show_warning("Invalid Filename", warning_message)
                 continue
 
-            # if we get here, the filename is valid
-            self.rec.set_filename(filename)
+            self.rec.filename = filename
             self.rec.save_wav()
             break
 
@@ -136,12 +127,27 @@ class PyRecorderGUI(tk.Frame):
             text="Start \u25B6", command=self.start_recording_event
         )
 
+    def _validate_filename(self, filename):
+        if len(filename) < 1:
+            return False, "Filename cannot be empty. Please try again."
+        pattern = r"^[A-Za-z][A-Za-z0-9]*$"
+        if not re.match(pattern, filename):
+            return (
+                False,
+                "The filename must start with a letter and contain only letters and numbers. Please try again.",
+            )
+
+        return True, None
+
+    def _show_warning(self, title, message):
+        messagebox.showwarning(title, message, parent=self.root)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("PyRecorder")
     root.geometry("300x50")
     root.configure(bg="#242424")
-    # root.resizable(False, False)
+    root.resizable(False, False)
     app = PyRecorderGUI(root=root)
     app.mainloop()
