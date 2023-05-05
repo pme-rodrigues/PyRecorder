@@ -2,6 +2,9 @@ import soundcard as sc
 import numpy as np
 import wave
 import threading
+import tempfile
+import shutil
+import os
 
 
 class PyRecorder:
@@ -9,8 +12,8 @@ class PyRecorder:
         self.sample_rate = 48000
         self.block_size = 1024
 
-        # SoundCard library processes audio data as floating-point numbers
-        self.recorded_audio = np.empty((0, 2), dtype=np.float32)
+        self.buffer_size = 47  # Adjust this value to write every 1 second to disk
+        self.buffered_audio = []
         self.rec_state = threading.Event()
         self.background_thread = None
         self._loopback_device = None
@@ -34,18 +37,39 @@ class PyRecorder:
         print(f"Device with name '{device_name}' is ready to record")
 
     def record(self):
+        # Create a temporary file to store the recorded audio data
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            self.temp_filename = temp_file.name
+
         try:
             with self._loopback_device.recorder(
                 samplerate=self.sample_rate, blocksize=self.block_size
             ) as recorder:
-                while self.rec_state.is_set():
-                    block = recorder.record(self.block_size)
-                    self.recorded_audio = np.concatenate(
-                        (self.recorded_audio, block), axis=0
-                    )
+                with wave.open(self.temp_filename, "wb") as temp_wav_file:
+                    # Set WAV file parameters
+                    temp_wav_file.setnchannels(2)
+                    temp_wav_file.setsampwidth(2)
+                    temp_wav_file.setframerate(self.sample_rate)
+
+                    while self.rec_state.is_set():
+                        block = recorder.record(self.block_size)
+                        self.buffered_audio.append(block)
+
+                        if len(self.buffered_audio) == self.buffer_size:
+                            buffered_audio_data = np.concatenate(
+                                self.buffered_audio, axis=0
+                            )
+                            # Convert the audio data to 16-bit integer format
+                            wav_data = (
+                                buffered_audio_data * np.iinfo(np.int16).max
+                            ).astype(np.int16)
+                            # Write audio data to the temporary WAV file
+                            temp_wav_file.writeframes(wav_data.tobytes())
+                            self.buffered_audio.clear()
 
         except Exception as error_msg:
             print(error_msg)
+            self.err_recording = True
 
     def start_recording(self):
         if not self.rec_state.is_set():
@@ -62,15 +86,11 @@ class PyRecorder:
         return self.rec_state.is_set()
 
     def reset_recording(self):
-        self.recorded_audio = np.empty((0, 2), dtype=np.float32)
+        self.buffered_audio.clear()
+        if os.path.exists(self.temp_filename):
+            os.remove(self.temp_filename)
 
     def save_wav(self):
-        with wave.open((self._filename + ".wav"), "wb") as wav_file:
-            wav_file.setnchannels(2)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(self.sample_rate)
-            wav_data = (self.recorded_audio * np.iinfo(np.int16).max).astype(
-                np.int16
-            )  # Convert the audio data to 16-bit integer format
-            wav_file.writeframes(wav_data.tobytes())
-        print(f"Wav file saved as {self._filename}.")
+        output_filename = self._filename + ".wav"
+        shutil.copyfile(self.temp_filename, output_filename)
+        print(f"Wav file saved as {output_filename}.")
