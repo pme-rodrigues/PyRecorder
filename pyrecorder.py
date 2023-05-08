@@ -5,6 +5,7 @@ import threading
 import tempfile
 import shutil
 import os
+import time
 
 
 class PyRecorder:
@@ -18,6 +19,8 @@ class PyRecorder:
         self.background_thread = None
         self._loopback_device = None
         self._filename = ""
+        self.temp_filename = ""
+        self.t0 = 0
 
     @property
     def filename(self):
@@ -33,8 +36,12 @@ class PyRecorder:
 
     @loopback_device.setter
     def loopback_device(self, device_name):
+        self.device_name = device_name
         self._loopback_device = sc.get_microphone(device_name, include_loopback=True)
         print(f"Device with name '{device_name}' is ready to record")
+
+    def time(self):
+        self.t0 = time.monotonic()
 
     def record(self):
         # Create a temporary file to store the recorded audio data
@@ -85,6 +92,10 @@ class PyRecorder:
 
     def is_recording_on(self):
         return self.rec_state.is_set()
+
+    def get_recording_duration(self):
+        elapsed_seconds = time.monotonic() - self.t0
+        return time.strftime("%H:%M:%S", time.gmtime(elapsed_seconds))
 
     def reset_recording(self):
         self.buffered_audio.clear()
