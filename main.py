@@ -95,8 +95,10 @@ class PyRecorderGUI(tk.Frame):
     def on_window_closing(self):
         if self.rec.is_recording_on():
             self.rec.stop_recording()
+            self.rec.reset_recording()
             self.root.destroy()
         else:
+            self.rec.reset_recording()
             self.root.destroy()
 
     def stop_recording_event(self):
