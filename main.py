@@ -30,6 +30,11 @@ class PyRecorderGUI(tk.Frame):
         )
         self.select_device_button.grid(row=0, column=0, padx=10, pady=10)
 
+        self.duration_label = tk.Label(
+            self, bg="#242424", fg="#f2f2f2", font=("Arial", 10)
+        )
+        self.duration_label.grid(row=1, column=0, columnspan=2, pady=5)
+
     def select_device(self):
         self.device_selection_window = tk.Toplevel(self.root)
         self.device_selection_window.title("Select Device")
@@ -82,6 +87,7 @@ class PyRecorderGUI(tk.Frame):
 
     def start_recording_event(self):
         self.rec.start_recording()
+        self.rec.time()
         self.select_device_button.config(state="disabled")
         self.start_button.config(
             text="Stop \u25A0",
@@ -91,6 +97,17 @@ class PyRecorderGUI(tk.Frame):
             relief="flat",
             command=self.stop_recording_event,
         )
+
+        self.root.geometry("300x100")
+        self.duration_label.config(text="Duration: 0.00s")
+        self.update_duration_label()
+
+    def update_duration_label(self):
+        if self.rec.is_recording_on():
+            duration = self.rec.get_recording_duration()
+            self.duration_label.config(text=f"Duration: {duration}")
+            # Update the label every 500 ms
+            self.after(500, self.update_duration_label)
 
     def on_window_closing(self):
         if self.rec.is_recording_on():
