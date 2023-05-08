@@ -110,7 +110,7 @@ class PyRecorderGUI(tk.Frame):
                 "Save Recording", "Enter filename:", parent=self.root
             )
 
-            if filename is None:
+            if filename is None:  # Cancel
                 break
 
             is_valid, warning_message = self._validate_filename(filename)

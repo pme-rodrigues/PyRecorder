@@ -56,20 +56,21 @@ class PyRecorder:
                         self.buffered_audio.append(block)
 
                         if len(self.buffered_audio) == self.buffer_size:
-                            buffered_audio_data = np.concatenate(
-                                self.buffered_audio, axis=0
-                            )
-                            # Convert the audio data to 16-bit integer format
-                            wav_data = (
-                                buffered_audio_data * np.iinfo(np.int16).max
-                            ).astype(np.int16)
-                            # Write audio data to the temporary WAV file
-                            temp_wav_file.writeframes(wav_data.tobytes())
-                            self.buffered_audio.clear()
+                            self._write_to_temp(temp_wav_file)
+                    # Make sure all data is saved
+                    self._write_to_temp(temp_wav_file)
 
         except Exception as error_msg:
             print(error_msg)
             self.err_recording = True
+
+    def _write_to_temp(self, temp_file):
+        buffered_audio_data = np.concatenate(self.buffered_audio, axis=0)
+        # Convert the audio data to 16-bit integer format
+        wav_data = (buffered_audio_data * np.iinfo(np.int16).max).astype(np.int16)
+        # Write audio data to the temporary WAV file
+        temp_file.writeframes(wav_data.tobytes())
+        self.buffered_audio.clear()
 
     def start_recording(self):
         if not self.rec_state.is_set():
