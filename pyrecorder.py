@@ -10,10 +10,9 @@ import time
 
 class PyRecorder:
     def __init__(self):
-        self.sample_rate = 48000
+        self.sample_rate = None
+        self.buffer_size = None
         self.block_size = 1024
-
-        self.buffer_size = 47  # Adjust this value to write every 1 second to disk
         self.buffered_audio = []
         self.rec_state = threading.Event()
         self.background_thread = None
@@ -32,16 +31,28 @@ class PyRecorder:
 
     @property
     def loopback_device(self):
-        return self._loopback_device
+        return self._loopback_device.name
 
     @loopback_device.setter
-    def loopback_device(self, device_name):
-        self.device_name = device_name
-        self._loopback_device = sc.get_microphone(device_name, include_loopback=True)
-        print(f"Device with name '{device_name}' is ready to record")
+    def loopback_device(self, device):
+        self._loopback_device = device
 
-    def time(self):
-        self.t0 = time.monotonic()
+        # If loopback_device is mono, set sample_rate to 16 kHz, otherwise 44.1 kHz
+        self.sample_rate = 16000 if device.channels == 1 else 44100
+
+        # Set buffer size to record for about 3 seconds
+        self.buffer_size = int(self.sample_rate * 3 / self.block_size)
+
+        print(f"Device with name '{self._loopback_device.name}' is ready to record")
+
+    @property
+    def is_recording(self):
+        return self.rec_state.is_set()
+
+    @property
+    def duration(self):
+        elapsed_seconds = time.monotonic() - self.t0
+        return time.strftime("%H:%M:%S", time.gmtime(elapsed_seconds))
 
     def record(self):
         # Create a temporary file to store the recorded audio data
@@ -54,7 +65,7 @@ class PyRecorder:
             ) as recorder:
                 with wave.open(self.temp_filename, "wb") as temp_wav_file:
                     # Set WAV file parameters
-                    temp_wav_file.setnchannels(2)
+                    temp_wav_file.setnchannels(self._loopback_device.channels)
                     temp_wav_file.setsampwidth(2)
                     temp_wav_file.setframerate(self.sample_rate)
 
@@ -84,18 +95,15 @@ class PyRecorder:
             self.rec_state.set()
         self.background_thread = threading.Thread(target=self.record)
         self.background_thread.start()
+        self._start_time()
+
+    def _start_time(self):
+        self.t0 = time.monotonic()
 
     def stop_recording(self):
         self.rec_state.clear()
         self.background_thread.join()
         self.background_thread = None
-
-    def is_recording_on(self):
-        return self.rec_state.is_set()
-
-    def get_recording_duration(self):
-        elapsed_seconds = time.monotonic() - self.t0
-        return time.strftime("%H:%M:%S", time.gmtime(elapsed_seconds))
 
     def reset_recording(self):
         self.buffered_audio.clear()
