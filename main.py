@@ -19,21 +19,42 @@ class PyRecorderGUI(tk.Frame):
         self.root.protocol("WM_DELETE_WINDOW", self.on_window_closing)
 
     def create_widgets(self):
+        # Select Device button
         self.select_device_button = tk.Button(
             self,
             text="Select Device",
             font=("Arial", 10, "bold"),
             bg="#a41c1c",
             fg="#f2f2f2",
+            width=13,
+            height=1,
             relief="flat",
             command=self.select_device,
         )
         self.select_device_button.grid(row=0, column=0, padx=10, pady=10)
 
-        self.duration_label = tk.Label(
-            self, bg="#242424", fg="#f2f2f2", font=("Arial", 10)
+        # Start and Stop buttons
+        self.start_button = tk.Button(
+            self,
+            text="Start \u25B6",
+            font=("Arial", 10, "bold"),
+            bg="#a41c1c",
+            fg="#f2f2f2",
+            width=13,
+            height=1,
+            relief="flat",
+            command=self.start_recording_event,
         )
-        self.duration_label.grid(row=1, column=0, columnspan=2, pady=5)
+
+        # Record duration label
+        self.duration_label = tk.Label(
+            self, bg="#242424", fg="#f2f2f2", font=("Arial", 14)
+        )
+
+        # Device name label
+        self.device_label = tk.Label(
+            self, bg="#242424", fg="#f2f2f2", font=("Arial", 8)
+        )
 
     def select_device(self):
         self.device_selection_window = tk.Toplevel(self.root)
@@ -65,62 +86,46 @@ class PyRecorderGUI(tk.Frame):
         selected_index = self.device_listbox.curselection()
         if selected_index:
             selected_device = self.microphones[selected_index[0]]
-            self.rec.loopback_device = selected_device.name
-            self.device_selection_window.destroy()
+            self.rec.loopback_device = selected_device
             self.show_start_button()
+            self.update_device_label()
+            self.select_device_button.grid(row=0, column=0, padx=10, pady=10)
+            self.device_selection_window.destroy()
         else:
             messagebox.showwarning(
                 "Warning", "No device selected. Please select a device."
             )
 
+    def update_device_label(self):
+        self.device_label.config(text=f"Device: {self.rec.loopback_device}")
+        self.device_label.grid(row=0, column=1, padx=10, pady=2, sticky="W")
+
     def show_start_button(self):
-        self.start_button = tk.Button(
-            self,
-            text="Start \u25B6",
-            font=("Arial", 10, "bold"),
-            bg="#a41c1c",
-            fg="#f2f2f2",
-            relief="flat",
-            command=self.start_recording_event,
-        )
-        self.start_button.grid(row=0, column=1, padx=10, pady=10)
+        self.start_button.grid(row=1, column=0, padx=10, pady=10)
 
     def start_recording_event(self):
         self.rec.start_recording()
-        self.rec.time()
         self.select_device_button.config(state="disabled")
-        self.start_button.config(
-            text="Stop \u25A0",
-            font=("Arial", 10, "bold"),
-            bg="#a41c1c",
-            fg="#f2f2f2",
-            relief="flat",
-            command=self.stop_recording_event,
-        )
-
-        self.root.geometry("300x100")
-        self.duration_label.config(text="Duration: 0.00s")
+        self.start_button.config(text="Stop \u25A0", command=self.stop_recording_event)
+        self.duration_label.config(text="00:00:00")
+        self.duration_label.grid(row=1, column=1, padx=10, pady=10, sticky="W")
         self.update_duration_label()
 
     def update_duration_label(self):
-        if self.rec.is_recording_on():
-            duration = self.rec.get_recording_duration()
-            self.duration_label.config(text=f"Duration: {duration}")
+        if self.rec.is_recording:
+            duration = self.rec.duration
+            self.duration_label.config(text=duration)
             # Update the label every 500 ms
             self.after(500, self.update_duration_label)
 
     def on_window_closing(self):
-        if self.rec.is_recording_on():
+        if self.rec.is_recording:
             self.rec.stop_recording()
-            self.rec.reset_recording()
-            self.root.destroy()
-        else:
-            self.rec.reset_recording()
-            self.root.destroy()
+        self.rec.reset_recording()
+        self.root.destroy()
 
     def stop_recording_event(self):
         self.rec.stop_recording()
-        self.select_device_button.config(state="normal")
 
         while True:
             filename = simpledialog.askstring(
@@ -146,6 +151,8 @@ class PyRecorderGUI(tk.Frame):
             text="Start \u25B6", command=self.start_recording_event
         )
 
+        self.select_device_button.config(state="normal")
+
     def _validate_filename(self, filename):
         if len(filename) < 1:
             return False, "Filename cannot be empty. Please try again."
@@ -165,8 +172,8 @@ class PyRecorderGUI(tk.Frame):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("PyRecorder")
-    root.geometry("300x50")
+    root.minsize(300, 50)
     root.configure(bg="#242424")
-    root.resizable(False, False)
+    root.pack_propagate(True)
     app = PyRecorderGUI(root=root)
     app.mainloop()
